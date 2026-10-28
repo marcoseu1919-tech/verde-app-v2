@@ -65,10 +65,12 @@ async function scan(dir,out){for await(const [n,h] of dir.entries()){if(h.kind==
 async function addFiles(items){toast('Lendo músicas…');let k=0;for(const it of items){const f=it.file||await it.h.getFile(),key=f.name+'|'+f.size;if(tracks.some(t=>t.key==key))continue;
 const m=await tags(f),base=f.name.replace(/\.[^.]+$/,'');tracks.push({key,file:f,dir:it.dir||null,name:f.name,title:m.title||base,artist:m.artist||'Artista desconhecido',album:m.album||'Álbum desconhecido',art:m.art||null});k++}
 toast(k+' música(s) adicionada(s)');render()}
-function pickFallback(){const i=document.createElement('input');i.type='file';i.multiple=true;i.webkitdirectory=!window.Capacitor;i.accept='audio/*';
-i.onchange=()=>addFiles([...i.files].filter(f=>/\.(mp3|m4a|flac|wav|ogg|aac|opus)$/i.test(f.name)||f.type.startsWith('audio')).map(file=>({file})));i.click()}
-async function pickDir(){$('#perm').style.display='none';if(!window.showDirectoryPicker)return pickFallback();
-try{const d=await showDirectoryPicker({mode:'readwrite'}),out=[];await scan(d,out);addFiles(out)}catch(e){if(e.name!='AbortError')pickFallback()}}
+let fp=null;
+function pickFallback(){if(!fp){fp=document.createElement('input');fp.type='file';fp.multiple=true;fp.webkitdirectory=!window.Capacitor;fp.accept='audio/*';fp.style.cssText='position:fixed;left:-9999px;opacity:0';document.body.appendChild(fp);
+fp.onchange=()=>{const fs=[...fp.files].filter(f=>/\.(mp3|m4a|flac|wav|ogg|aac|opus)$/i.test(f.name)||f.type.startsWith('audio')).map(file=>({file}));fp.value='';if(fs.length)addFiles(fs);else toast('Nenhuma música selecionada')}}
+fp.click()}
+async function pickDir(){$('#perm').style.display='none';if(window.Capacitor||!window.showDirectoryPicker)return pickFallback();
+try{const d=await showDirectoryPicker({mode:'readwrite'}),out=[];await scan(d,out);addFiles(out)}catch(e){if(e.name!='AbortError')toast('Não foi possível abrir a pasta')}}
 $('#add').onclick=$('#allow').onclick=()=>{if($('#perm').style.display=='flex')pickDir();else $('#perm').style.display='flex'};
 $('#deny').onclick=()=>$('#perm').style.display='none';
 /* ---- listas ---- */
